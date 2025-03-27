@@ -89,7 +89,7 @@
       #calendar {
         min-width: 900px;
         max-width: 900px;
-        height: 500px !important;
+        height: 600px !important;
         margin: 40px auto;
         background-color: white;
         border-radius: 8px;
@@ -108,6 +108,11 @@
 
       .fc-header-toolbar {
         margin-bottom: 4px !important;
+      }
+
+      .fc-daygrid-day-events,
+      .fc-daygrid-day-events {
+        min-height: fit-content !important;
       }
     </style>
   </head>
@@ -467,19 +472,108 @@
         }
       }
       // Renderizar exámenes en el calendario mensual
+
       function renderCalendar(exams) {
         const subjectColors = {
           Religion: "#FF6B6B", // Rojo suave
           Matematicas: "#25a6da", // Turquesa
           Fisica: "#766ec5", // Azul claro
           Lengua: "#e61919", // Amarillo dorado
-          Historia: "#008000", // Púrpura
+          Historia: "#008000", // Verde
           Filosofia: "#b8b814", // Verde pastel
           Tecnologia: "#FF8ED4", // Rosa
           Frances: "#FF9FF3", // Rosa claro
         };
+
+        // Add CSS for thick exam border and past events
+        const style = document.createElement("style");
+        style.textContent = `
+    .fc-event.exam-event {
+      border-width: 2.5px !important;
+      border-color: #FF0000 !important;
+    }
+    .fc-event.past-event {
+      opacity: 0.5 !important;
+      color: black !important;
+    }
+  `;
+        document.head.appendChild(style);
+
+        // Function to convert hex to RGBA with 80% opacity
+        function hexToRgba(hex, opacity = 0.3) {
+          // Remove the hash at the beginning if it's there
+          hex = hex.replace("#", "");
+
+          // Parse the hex color
+          const r = parseInt(hex.substring(0, 2), 16);
+          const g = parseInt(hex.substring(2, 4), 16);
+          const b = parseInt(hex.substring(4, 6), 16);
+
+          // Return RGBA string
+          return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+
+        // Study reminder days for each subject
+        const studyReminderDays = {
+          Religion: 0,
+          Matematicas: 2,
+          Fisica: 3,
+          Lengua: 4,
+          Historia: 5,
+          Filosofia: 5,
+          Tecnologia: 2,
+          Frances: 1,
+        };
+
+        // Function to check if an event is in the past
+        function isPastEvent(eventDate) {
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Reset time to start of day
+          const eventDateObj = new Date(eventDate);
+          return eventDateObj < today;
+        }
+
+        // Function to generate study reminder events
+        function generateStudyReminders(exams) {
+          return exams.flatMap((exam) => {
+            const reminderDays = studyReminderDays[exam.subject] || 0;
+
+            // Skip if no study reminder days for the subject
+            if (reminderDays === 0) return [];
+
+            // Generate multiple study reminder events
+            const reminderEvents = [];
+            const originalColor = subjectColors[exam.subject] || "#3788d8";
+            const reducedOpacityColor = isPastEvent(exam.examDate)
+              ? hexToRgba(originalColor, 0.1)
+              : hexToRgba(originalColor);
+
+            for (let i = 1; i <= reminderDays; i++) {
+              const reminderDate = new Date(exam.examDate);
+              reminderDate.setDate(reminderDate.getDate() - i);
+
+              reminderEvents.push({
+                title: `Estudiar ${exam.subject}`,
+                start: reminderDate.toISOString().split("T")[0],
+                end: reminderDate.toISOString().split("T")[0],
+                allDay: true,
+                backgroundColor: reducedOpacityColor,
+                borderColor: reducedOpacityColor,
+                textColor: isPastEvent(reminderDate.toISOString().split("T")[0])
+                  ? "black"
+                  : "black",
+                className: isPastEvent(reminderDate.toISOString().split("T")[0])
+                  ? ["study-reminder", "past-event"]
+                  : "study-reminder",
+              });
+            }
+
+            return reminderEvents;
+          });
+        }
+
         if (!calendar) {
-          // Inicializar el calendario solo una vez
+          // Initialize calendar only once
           const calendarEl = document.getElementById("calendar");
           calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: "dayGridMonth",
@@ -489,7 +583,7 @@
               left: "prev,next",
               center: "title",
               right: "",
-            }, // Mostrar siempre el mes actual y el siguiente
+            },
             visibleRange: function (currentDate) {
               const start = new Date(
                 currentDate.getFullYear(),
@@ -503,35 +597,65 @@
               );
               return { start: start, end: end };
             },
-            events: exams.map((exam) => {
-              return {
-                title: exam.examName,
-                start: exam.examDate,
-                end: exam.examDate,
-                allDay: true,
-                backgroundColor: subjectColors[exam.subject] || "#3788d8", // Color por defecto si no se encuentra
-                borderColor: subjectColors[exam.subject] || "#3788d8",
-              };
-            }),
+            events: [],
             eventClick: function (info) {
-              info.jsEvent.preventDefault(); // Prevenir comportamiento por defecto
+              info.jsEvent.preventDefault();
               showExamDetails(info);
             },
           });
           calendar.render();
+
+          // First add study reminder events
+          generateStudyReminders(exams).forEach((reminderEvent) => {
+            calendar.addEvent(reminderEvent);
+          });
+
+          // Then add exam events
+          exams.forEach((exam) => {
+            calendar.addEvent({
+              title: `${exam.examName}`,
+              start: exam.examDate,
+              end: exam.examDate,
+              allDay: true,
+              backgroundColor: isPastEvent(exam.examDate)
+                ? hexToRgba(subjectColors[exam.subject] || "#3788d8", 0.1)
+                : subjectColors[exam.subject] || "#3788d8",
+              borderColor: "#FF0000",
+              textColor: isPastEvent(exam.examDate) ? "black" : undefined,
+              className: isPastEvent(exam.examDate)
+                ? ["exam-event", "past-event"]
+                : "exam-event",
+            });
+          });
         } else {
-          // Si el calendario ya está inicializado, actualizar los eventos
+          // If calendar is already initialized, clear existing events
           calendar.getEvents().forEach((event) => event.remove());
+
+          // First add study reminder events
+          generateStudyReminders(exams).forEach((reminderEvent) => {
+            calendar.addEvent(reminderEvent);
+          });
+
+          // Then add exam events
           exams.forEach((exam) => {
             calendar.addEvent({
               title: `${exam.subject}: ${exam.examName}`,
               start: exam.examDate,
               end: exam.examDate,
               allDay: true,
+              backgroundColor: isPastEvent(exam.examDate)
+                ? hexToRgba(subjectColors[exam.subject] || "#3788d8", 0.1)
+                : subjectColors[exam.subject] || "#3788d8",
+              borderColor: "#FF0000",
+              textColor: isPastEvent(exam.examDate) ? "black" : undefined,
+              className: isPastEvent(exam.examDate)
+                ? ["exam-event", "past-event"]
+                : "exam-event",
             });
           });
         }
       }
+
       // Renderizar el calendario semanal
       function getExamEvents(exams, weeklySchedule) {
         const subjectSlotsByDay = {
