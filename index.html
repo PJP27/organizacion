@@ -168,469 +168,421 @@ const FILE_PATH = 'data/exams.json';
 let exams = []; // Guardar los exámenes localmente
 let calendar; // Instancia del calendario mensual
 let weeklyCalendar; // Instancia del calendario semanal
-
 // Inicializar flatpickr
 flatpickr("#datePicker", {
-    dateFormat: "Y-m-d",
+    dateFormat: "Y-m-d",
 });
-
 // Función para alternar la visibilidad del gestor de exámenes
 function toggleTaskManager() {
-    const taskManagerContainer = document.getElementById('taskManagerContainer');
-    const taskManagerOverlay = document.getElementById('taskManagerOverlay');
-    const credentialsForm = document.getElementById('credentialsForm');
-    const taskManager = document.getElementById('taskManager');
-
-    // Mostrar el contenedor y el overlay
-    taskManagerContainer.classList.remove('hidden');
-    taskManagerOverlay.classList.remove('hidden');
-
-    // Mostrar el formulario de credenciales, ocultar el formulario de exámenes
-    credentialsForm.classList.remove('hidden');
-    taskManager.classList.add('hidden');
+    const taskManagerContainer = document.getElementById('taskManagerContainer');
+    const taskManagerOverlay = document.getElementById('taskManagerOverlay');
+    const credentialsForm = document.getElementById('credentialsForm');
+    const taskManager = document.getElementById('taskManager');
+    // Mostrar el contenedor y el overlay
+    taskManagerContainer.classList.remove('hidden');
+    taskManagerOverlay.classList.remove('hidden');
+    // Mostrar el formulario de credenciales, ocultar el formulario de exámenes
+    credentialsForm.classList.remove('hidden');
+    taskManager.classList.add('hidden');
 }
-
 // Función para cerrar el gestor de exámenes
 function closeTaskManager() {
-    const taskManagerContainer = document.getElementById('taskManagerContainer');
-    const taskManagerOverlay = document.getElementById('taskManagerOverlay');
-    taskManagerContainer.classList.add('hidden');
-    taskManagerOverlay.classList.add('hidden');
+    const taskManagerContainer = document.getElementById('taskManagerContainer');
+    const taskManagerOverlay = document.getElementById('taskManagerOverlay');
+    taskManagerContainer.classList.add('hidden');
+    taskManagerOverlay.classList.add('hidden');
 }
-
 // Función para guardar credenciales
 function setCredentials() {
-    githubToken = document.getElementById('githubToken').value.trim();
-
-    if (!githubToken) {
-        alert('Por favor, ingresa un token válido.');
-        return;
-    }
-
-    // Ocultar formulario de credenciales y mostrar el gestor de tareas
-    document.getElementById('credentialsForm').classList.add('hidden');
-    document.getElementById('taskManager').classList.remove('hidden');
-
-    // Cargar los exámenes existentes
-    loadAndRenderExams();
+    githubToken = document.getElementById('githubToken').value.trim();
+    if (!githubToken) {
+        alert('Por favor, ingresa un token válido.');
+        return;
+    }
+    // Ocultar formulario de credenciales y mostrar el gestor de tareas
+    document.getElementById('credentialsForm').classList.add('hidden');
+    document.getElementById('taskManager').classList.remove('hidden');
+    // Cargar los exámenes existentes
+    loadAndRenderExams();
 }
-
 // Función para añadir un examen
 function addExam() {
-    const subject = document.getElementById('subjectSelect').value;
-    const examName = document.getElementById('examInput').value.trim();
-    const examDate = document.getElementById('datePicker').value;
-
-    if (!subject || !examName || !examDate) {
-        alert('Por favor, selecciona una asignatura, ingresa el nombre del examen y la fecha.');
-        return;
-    }
-
-    const newExam = {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        subject: subject,
-        examName: examName,
-        examDate: examDate,
-        created: new Date().toISOString() // Add creation timestamp
-    };
-
-    exams.push(newExam);
-    renderCalendar(exams); // Actualizar el calendario mensual
-    renderWeeklyCalendar(exams); // Actualizar el calendario semanal
-    
-    // Limpiar los campos
-    document.getElementById('subjectSelect').value = '';
-    document.getElementById('examInput').value = '';
-    document.getElementById('datePicker').value = '';
+    const subject = document.getElementById('subjectSelect').value;
+    const examName = document.getElementById('examInput').value.trim();
+    const examDate = document.getElementById('datePicker').value;
+    if (!subject || !examName || !examDate) {
+        alert('Por favor, selecciona una asignatura, ingresa el nombre del examen y la fecha.');
+        return;
+    }
+    const newExam = {
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        subject: subject,
+        examName: examName,
+        examDate: examDate,
+        created: new Date().toISOString() // Add creation timestamp
+    };
+    exams.push(newExam);
+    renderCalendar(exams); // Actualizar el calendario mensual
+    renderWeeklyCalendar(exams); // Actualizar el calendario semanal
+   
+    // Limpiar los campos
+    document.getElementById('subjectSelect').value = '';
+    document.getElementById('examInput').value = '';
+    document.getElementById('datePicker').value = '';
 }
-
 // Función para guardar cambios en GitHub
 async function saveChanges() {
-    try {
-        // Ensure all exams have an ID and created timestamp
-        const processedExams = exams.map(exam => ({
-            ...exam,
-            id: exam.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            created: exam.created || new Date().toISOString()
-        }));
-
-        const success = await retryExamSave(processedExams, 3);
-
-        if (success) {
-            alert('¡Cambios guardados exitosamente en GitHub!');
-        }
-    } catch (error) {
-        console.error('Error al guardar cambios:', error);
-        alert(`No se pudieron guardar los cambios: ${error.message}`);
-    }
+    try {
+        // Ensure all exams have an ID and created timestamp
+        const processedExams = exams.map(exam => ({
+            ...exam,
+            id: exam.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            created: exam.created || new Date().toISOString()
+        }));
+        const success = await retryExamSave(processedExams, 3);
+        if (success) {
+            alert('¡Cambios guardados exitosamente en GitHub!');
+        }
+    } catch (error) {
+        console.error('Error al guardar cambios:', error);
+        alert(`No se pudieron guardar los cambios: ${error.message}`);
+    }
 }
-
 // Función de reintento para guardar exámenes
 async function retryExamSave(examsToSave, maxRetries) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-            const currentSHA = await getFileSHA();
-            const content = btoa(JSON.stringify(examsToSave));
-
-            const response = await fetch(
-                `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `token ${githubToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        message: `Update exams (Attempt ${attempt})`,
-                        content,
-                        sha: currentSHA
-                    })
-                }
-            );
-
-            if (response.ok) {
-                console.log('Exámenes guardados exitosamente en GitHub.');
-                await loadAndRenderExams();
-                return true;
-            }
-
-            const errorData = await response.json();
-
-            if (response.status === 409) {
-                console.warn(`Conflicto en el intento ${attempt}. Refrescando exámenes...`);
-                const latestExams = await loadExams();
-                exams = mergeExams(latestExams, examsToSave);
-
-                if (attempt === maxRetries) {
-                    throw new Error('No se pudo resolver el conflicto después de varios intentos');
-                }
-
-                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-            } else {
-                throw new Error(`Error al guardar: ${errorData.message}`);
-            }
-        } catch (error) {
-            console.error(`Intento ${attempt} fallido:`, error);
-
-            if (attempt === maxRetries) {
-                throw error;
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-        }
-    }
-
-    return false;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            const currentSHA = await getFileSHA();
+            const content = btoa(JSON.stringify(examsToSave));
+            const response = await fetch(
+                `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
+                {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Update exams (Attempt ${attempt})`,
+                        content,
+                        sha: currentSHA
+                    })
+                }
+            );
+            if (response.ok) {
+                console.log('Exámenes guardados exitosamente en GitHub.');
+                await loadAndRenderExams();
+                return true;
+            }
+            const errorData = await response.json();
+            if (response.status === 409) {
+                console.warn(`Conflicto en el intento ${attempt}. Refrescando exámenes...`);
+                const latestExams = await loadExams();
+                exams = mergeExams(latestExams, examsToSave);
+                if (attempt === maxRetries) {
+                    throw new Error('No se pudo resolver el conflicto después de varios intentos');
+                }
+                await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+            } else {
+                throw new Error(`Error al guardar: ${errorData.message}`);
+            }
+        } catch (error) {
+            console.error(`Intento ${attempt} fallido:`, error);
+            if (attempt === maxRetries) {
+                throw error;
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+    }
+    return false;
 }
-
 // Función para fusionar exámenes locales y remotos
 function mergeExams(remoteExams, localExams) {
-    const examMap = new Map();
-
-    // Primero añadir todos los exámenes remotos
-    remoteExams.forEach(exam => {
-        examMap.set(exam.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, exam);
-    });
-
-    // Luego añadir o actualizar con exámenes locales
-    localExams.forEach(localExam => {
-        const existingExam = examMap.get(localExam.id);
-
-        if (!existingExam || new Date(localExam.created) > new Date(existingExam.created)) {
-            examMap.set(localExam.id, localExam);
-        }
-    });
-
-    return Array.from(examMap.values())
-        .sort((a, b) => new Date(a.created) - new Date(b.created));
+    const examMap = new Map();
+    // Primero añadir todos los exámenes remotos
+    remoteExams.forEach(exam => {
+        examMap.set(exam.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, exam);
+    });
+    // Luego añadir o actualizar con exámenes locales
+    localExams.forEach(localExam => {
+        const existingExam = examMap.get(localExam.id);
+        if (!existingExam || new Date(localExam.created) > new Date(existingExam.created)) {
+            examMap.set(localExam.id, localExam);
+        }
+    });
+    return Array.from(examMap.values())
+        .sort((a, b) => new Date(a.created) - new Date(b.created));
 }
-
 // Cargar exámenes desde GitHub
 async function loadExams() {
-    try {
-        const response = await fetch(
-            `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${FILE_PATH}?t=${Date.now()}`
-        );
-
-        if (!response.ok) {
-            if (response.status === 404) return [];
-            throw new Error(`Error al cargar los exámenes: ${response.status} - ${response.statusText}`);
-        }
-
-        const loadedExams = await response.json();
-        
-        // Ensure each exam has an ID and created timestamp
-        const processedExams = loadedExams.map(exam => ({
-            ...exam,
-            id: exam.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-            created: exam.created || new Date().toISOString()
-        }));
-
-        exams = processedExams; // Update global exams
-        return processedExams;
-    } catch (error) {
-        console.error('Error al cargar exámenes:', error);
-        throw error;
-    }
+    try {
+        const response = await fetch(
+            `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${FILE_PATH}?t=${Date.now()}`
+        );
+        if (!response.ok) {
+            if (response.status === 404) return [];
+            throw new Error(`Error al cargar los exámenes: ${response.status} - ${response.statusText}`);
+        }
+        const loadedExams = await response.json();
+       
+        // Ensure each exam has an ID and created timestamp
+        const processedExams = loadedExams.map(exam => ({
+            ...exam,
+            id: exam.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            created: exam.created || new Date().toISOString()
+        }));
+        exams = processedExams; // Update global exams
+        return processedExams;
+    } catch (error) {
+        console.error('Error al cargar exámenes:', error);
+        throw error;
+    }
 }
-
 // Obtener SHA del archivo desde GitHub
 async function getFileSHA() {
-    try {
-        const response = await fetch(
-            `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
-                { headers: { 'Authorization': `token ${githubToken}` } }
-          );
-
-          if (!response.ok) throw new Error(`Error al obtener SHA del archivo`);
-          return (await response.json()).sha;
-
-      } catch(error){
-          console.error("Error SHA")
-      }
+    try {
+        const response = await fetch(
+            `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
+                { headers: { 'Authorization': `token ${githubToken}` } }
+          );
+          if (!response.ok) throw new Error(`Error al obtener SHA del archivo`);
+          return (await response.json()).sha;
+      } catch(error){
+          console.error("Error SHA")
+      }
 }
-
 // Renderizar exámenes en el calendario mensual
 function renderCalendar(exams) {
-    if (!calendar) {
-        // Inicializar el calendario solo una vez
-        const calendarEl = document.getElementById('calendar');
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'es',
-            firstDay: 1,
-            headerToolbar: {
-                left: 'prev,next',
-                center: 'title',
-                right: ''
-            },
-            // Mostrar siempre el mes actual y el siguiente
-            visibleRange: function(currentDate) {
-                const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-                const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
-                return { start: start, end: end };
-            },
-            events: exams.map(exam => {
-                return {
-                    title: `${exam.subject}: ${exam.examName}`,
-                    start: exam.examDate,
-                    end: exam.examDate,
-                    allDay: true,
-                };
-            })
-        });
-        calendar.render();
-    } else {
-        // Si el calendario ya está inicializado, actualizar los eventos
-        calendar.getEvents().forEach(event => event.remove());
-
-        exams.forEach(exam => {
-            calendar.addEvent({
-                title: `${exam.subject}: ${exam.examName}`,
-                start: exam.examDate,
-                end: exam.examDate,
-                allDay: true,
-            });
-        });
-    }
+    if (!calendar) {
+        // Inicializar el calendario solo una vez
+        const calendarEl = document.getElementById('calendar');
+        calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            firstDay: 1,
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: ''
+            },
+            // Mostrar siempre el mes actual y el siguiente
+            visibleRange: function(currentDate) {
+                const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+                const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
+                return { start: start, end: end };
+            },
+            events: exams.map(exam => {
+                return {
+                    title: exam.examName,
+                    start: exam.examDate,
+                    end: exam.examDate,
+                    allDay: true,
+                };
+            })
+        });
+        calendar.render();
+    } else {
+        // Si el calendario ya está inicializado, actualizar los eventos
+        calendar.getEvents().forEach(event => event.remove());
+        exams.forEach(exam => {
+            calendar.addEvent({
+                title: `${exam.subject}: ${exam.examName}`,
+                start: exam.examDate,
+                end: exam.examDate,
+                allDay: true,
+            });
+        });
+    }
 }
-
 // Renderizar el calendario semanal
+function getExamEvents(exams, weeklySchedule) {
+    const subjectSlotsByDay = {
+      1: {
+        Matematicas: [0],
+        Historia: [1],
+        Tecnologia: [2],
+        Fisica: [4],
+        Programacion: [5],
+        Frances: [6],
+      },
+      2: {
+        Matematicas: [0],
+        Tecnologia: [1],
+        Religion: [2],
+        Filosofia: [4],
+        TIC: [5],
+        Lengua: [6],
+      },
+      3: {
+        Historia: [0],
+        Matematicas: [1],
+        Programacion: [2],
+        Fisica: [4],
+        Lengua: [5],
+        Filosofia: [6],
+      },
+      4: {
+        Tecnologia: [0],
+        Matematicas: [1],
+        Frances: [2],
+        TIC: [4],
+        Fisica: [5],
+        Historia: [6],
+      },
+      5: {
+        Tecnologia: [0],
+        Fisica: [1],
+        Frances: [2],
+        Lengua: [4],
+        Filosofia: [5],
+        Historia: [6],
+      },
+    };
+    const timeSlots = [
+      "08:15",
+      "09:15",
+      "10:15",
+      "11:15",
+      "12:15",
+      "13:15",
+      "14:15",
+    ];
+    const examEvents = [];
+    const modifiedScheduleEvents = [...weeklySchedule];
+    exams.forEach(exam => {
+        const examDate = new Date(exam.examDate);
+        const dayOfWeek = examDate.getDay() === 0 ? 7 : examDate.getDay();
+        // Check if the exam's subject has a slot on this day
+        if (subjectSlotsByDay[dayOfWeek] &&
+            subjectSlotsByDay[dayOfWeek][exam.subject] !== undefined) {
+           
+            const slotIndex = subjectSlotsByDay[dayOfWeek][exam.subject][0];
+            const startTime = timeSlots[slotIndex];
+            const endTime = timeSlots[slotIndex + 1] || '15:15';
+            // Find and modify the corresponding schedule event
+            const scheduleEventIndex = modifiedScheduleEvents.findIndex(
+                event => event.title === exam.subject &&
+                         event.daysOfWeek[0] === dayOfWeek
+            );
+            if (scheduleEventIndex !== -1) {
+                // Split the original subject event
+                modifiedScheduleEvents[scheduleEventIndex] = {
+                    ...modifiedScheduleEvents[scheduleEventIndex],
+                    startTime: startTime,
+                    endTime: `${startTime.split(':')[0]}:45`,
+                };
+                // Add exam event
+                examEvents.push({
+                    title: exam.examName, // This is the key change
+                    startTime: `${startTime.split(':')[0]}:45`,
+                    endTime: endTime,
+                    daysOfWeek: [dayOfWeek],
+                    backgroundColor: 'rgba(255, 0, 0, 0.2)',
+                    borderColor: 'red',
+                    textColor: 'black',
+                    allDay: false
+                });
+            }
+        }
+    });
+    return [...modifiedScheduleEvents, ...examEvents];
+}
 function renderWeeklyCalendar(exams) {
-    const weeklyCalendarEl = document.getElementById('weeklyCalendar');
-
-    if (!weeklyCalendar) {
-        weeklyCalendar = new FullCalendar.Calendar(weeklyCalendarEl, {
-            initialView: 'timeGridWeek',
-            locale: 'es',
-            firstDay: 1,
-            headerToolbar: {
-                left: 'prev,next',
-                center: 'title',
-                right: ''
-            },
-            hiddenDays: [0, 6],
-            slotMinTime: '08:15:00',
-            slotMaxTime: '15:15:00',
-            allDaySlot: false,
-            slotLabelFormat: {
-                hour: 'numeric', minute: '2-digit', omitZeroMinute: false, meridiem: false
-            },
-            slotLabelContent: function(info) {
-                const labels = ['1era', '2da', '3era', 'Recreo', '4ta', '5ta', '6ta'];
-                return labels[Math.floor((info.date.getHours() - 8) + (info.date.getMinutes() / 60))] || '';
-            },
-            eventContent: function(arg) {
-                const allEvents = arg.view.calendar.getEvents();
-                const eventsAtSameTime = allEvents.filter(event =>
-                    event.start.getTime() === arg.event.start.getTime() &&
-                    event.end.getTime() === arg.event.end.getTime()
-                );
-                
-                // Evitar la duplicación eliminando la versión individual
-                if (eventsAtSameTime.length > 1 && arg.event.extendedProps.isExam) {
-                    return { html: '' };
-                }
-
-                if (eventsAtSameTime.length > 1) {
-                    return {
-                        html: `<div style="border: 1px solid black; padding: 5px; background: rgba(0,0,0,0.1);">
-                            ${eventsAtSameTime.map(ev => `
-                                <div style="background-color: ${ev.extendedProps.isExam ? 'rgba(255, 0, 0, 0.2)' : 'transparent'};
-                                             border-top: ${ev.extendedProps.isExam ? '1px solid red' : 'none'};
-                                             padding: 2px; font-size: 0.8em; text-overflow: ellipsis; white-space: nowrap;">
-                                    ${ev.title}
-                                </div>`).join('')}
-                            </div>`
-                    };
-                } else {
-                    return {
-                        html: `<div style="background-color: ${arg.event.extendedProps.isExam ? 'rgba(255, 0, 0, 0.2)' : 'transparent'};
-                                         border-top: ${arg.event.extendedProps.isExam ? '1px solid red' : 'none'};
-                                         padding: 2px; font-size: 0.8em; text-overflow: ellipsis; white-space: nowrap;">
-                                ${arg.event.title}
-                                </div>`
-                    };
-                }
-            },
-            events: [
-                ...generateWeeklySchedule(),
-                ...getExamEvents(exams)
-            ]
-        });
-        weeklyCalendar.render();
-    } else {
-        weeklyCalendar.getEvents().forEach(event => event.remove());
-        [...generateWeeklySchedule(), ...getExamEvents(exams)].forEach(event => weeklyCalendar.addEvent(event));
-    }
+    const weeklyCalendarEl = document.getElementById('weeklyCalendar');
+    if (!weeklyCalendar) {
+        weeklyCalendar = new FullCalendar.Calendar(weeklyCalendarEl, {
+            initialView: 'timeGridWeek',
+            locale: 'es',
+            firstDay: 1,
+            headerToolbar: {
+                left: 'prev,next',
+                center: 'title',
+                right: ''
+            },
+            hiddenDays: [0, 6], // Ocultar sábado y domingo
+            slotMinTime: '08:15:00',
+            slotMaxTime: '15:15:00',
+            allDaySlot: false, // Eliminar la fila "all-day"
+            slotLabelFormat: {
+                hour: 'numeric', minute: '2-digit', omitZeroMinute: false, meridiem: false
+            },
+            slotLabelContent: function(info) {
+                const labels = ['1era', '2da', '3era', 'Recreo', '4ta', '5ta', '6ta'];
+                return labels[Math.floor((info.date.getHours() - 8) + (info.date.getMinutes() / 60))] || '';
+            },
+            events: function(fetchInfo, successCallback) {
+                const weeklyScheduleEvents = generateWeeklySchedule();
+                const allEvents = getExamEvents(exams, weeklyScheduleEvents);
+                successCallback(allEvents);
+            }
+        });
+        weeklyCalendar.render();
+    } else {
+        // If calendar is already initialized, just refresh
+        weeklyCalendar.refetchEvents();
+    }
 }
-
-function getExamEvents(exams) {
-    // Configuración dinámica de los slots según el día de la semana
-    const subjectSlotsByDay = {
-        1: { // Lunes
-            'Matematicas': [0, 1],
-            'Historia': [2],
-            'Tecnologia': [3],
-            'Fisica': [4],
-            'Programacion': [5],
-            'Frances': [6]
-        },
-        2: { // Martes
-            'Matematicas': [0, 1],
-            'Tecnologia': [2],
-            'Religion': [3],
-            'Filosofia': [4],
-            'TIC': [5],
-            'Lengua': [6]
-        },
-        3: { // Miércoles
-            'Historia': [0],
-            'Matematicas': [1, 2],
-            'Programacion': [3],
-            'Fisica': [4],
-            'Lengua': [5],
-            'Filosofia': [6]
-        },
-        4: { // Jueves
-            'Tecnologia': [0],
-            'Matematicas': [1, 2],
-            'Frances': [3],
-            'TIC': [4],
-            'Fisica': [5],
-            'Historia': [6]
-        },
-        5: { // Viernes
-            'Tecnologia': [0],
-            'Fisica': [1],
-            'Frances': [2],
-            'Lengua': [4],
-            'Filosofia': [5],
-            'Historia': [6]
-        }
-    };
-
-    const timeSlots = [
-        '08:15', '09:15', '10:15', '11:15', '12:15', '13:15', '14:15'
-    ];
-
-    return exams.flatMap(exam => {
-        const examDate = new Date(exam.examDate);
-        const weekDay = examDate.getDay(); // 0 (Sunday) to 6 (Saturday)
-
-        // Skip weekends
-        if (weekDay === 0 || weekDay === 6) return [];
-
-        const subjectSlots = subjectSlotsByDay[weekDay];
-        if (!subjectSlots || !subjectSlots[exam.subject]) return [];
-
-        return subjectSlots[exam.subject].map(slotIndex => ({
-            title: `${exam.subject}: ${exam.examName}`,
-            start: `${exam.examDate}T${timeSlots[slotIndex]}`,
-            end: `${exam.examDate}T${timeSlots[slotIndex + 1] || '15:15'}`,
-            backgroundColor: 'transparent',
-            borderColor: 'transparent',
-            extendedProps: {
-                isExam: true
-            }
-        }));
-    });
+// Helper function to calculate half-time
+function getHalfTime(time, firstHalf) {
+    const [hours, minutes] = time.split(':').map(Number);
+    if (firstHalf) {
+        return `${hours}:15`;
+    } else {
+        return `${hours}:45`;
+    }
 }
-
 function generateWeeklySchedule() {
-    const schedule = {
-        1: ['Matematicas', 'Historia', 'Tecnologia', 'Recreo', 'Fisica', 'Programacion', 'Frances'],
-        2: ['Matematicas', 'Tecnologia', 'Religion', 'Recreo', 'Filosofia', 'TIC', 'Lengua'],
-        3: ['Historia', 'Matematicas', 'Programacion', 'Recreo', 'Fisica', 'Lengua', 'Filosofia'],
-        4: ['Tecnologia', 'Matematicas', 'Frances', 'Recreo', 'TIC', 'Fisica', 'Historia'],
-        5: ['Tecnologia', 'Fisica', 'Frances', 'Recreo', 'Lengua', 'Filosofia', 'Historia']
-    };
-    
-    const timeSlots = [
-        '08:15', '09:15', '10:15', '11:15', '12:15', '13:15', '14:15'
-    ];
-    
-    let events = [];
-    
-    for (let day = 1; day <= 5; day++) {
-        schedule[day].forEach((subject, index) => {
-            let startTime = timeSlots[index];
-            let endTime = timeSlots[index + 1] || '15:15';
-            
-            events.push({
-                title: subject,
-                startTime: startTime,
-                endTime: endTime,
-                daysOfWeek: [day],
-                backgroundColor: subject === 'Recreo' ? 'rgba(255, 193, 7, 0.5)' : 'rgba(0, 123, 255, 0.2)',
-                borderColor: subject === 'Recreo' ? 'orange' : 'blue',
-                textColor: 'black',
-                allDay: false
-            });
-        });
-    }
-    return events;
+    const schedule = {
+        1: ['Matematicas', 'Historia', 'Tecnologia', 'Recreo', 'Fisica', 'Programacion', 'Frances'],
+        2: ['Matematicas', 'Tecnologia', 'Religion', 'Recreo', 'Filosofia', 'TIC', 'Lengua'],
+        3: ['Historia', 'Matematicas', 'Programacion', 'Recreo', 'Fisica', 'Lengua', 'Filosofia'],
+        4: ['Tecnologia', 'Matematicas', 'Frances', 'Recreo', 'TIC', 'Fisica', 'Historia'],
+        5: ['Tecnologia', 'Fisica', 'Frances', 'Recreo', 'Lengua', 'Filosofia', 'Historia']
+    };
+   
+    const timeSlots = [
+        '08:15', '09:15', '10:15', '11:15', '12:15', '13:15', '14:15'
+    ];
+   
+    let events = [];
+   
+    for (let day = 1; day <= 5; day++) {
+        schedule[day].forEach((subject, index) => {
+            let startTime = timeSlots[index];
+            let endTime = timeSlots[index + 1] || '15:15';
+           
+            events.push({
+                title: subject,
+                startTime: startTime,
+                endTime: endTime,
+                daysOfWeek: [day],
+                backgroundColor: subject === 'Recreo' ? 'rgba(255, 193, 7, 0.5)' : 'rgba(0, 123, 255, 0.2)',
+                borderColor: subject === 'Recreo' ? 'orange' : 'blue',
+                textColor: 'black',
+                allDay: false
+            });
+        });
+    }
+    return events;
 }
-
-
 // Cargar y renderizar exámenes
 async function loadAndRenderExams() {
-    try {
-        const loadedExams = await loadExams();
-        renderCalendar(loadedExams);
-        renderWeeklyCalendar(loadedExams);
-    } catch (error) {
-        console.error('Error al cargar y renderizar exámenes:', error);
-    }
+    try {
+        const loadedExams = await loadExams();
+        renderCalendar(loadedExams);
+        renderWeeklyCalendar(loadedExams);
+    } catch (error) {
+        console.error('Error al cargar y renderizar exámenes:', error);
+    }
 }
-
 // Cargar y renderizar exámenes al cargar la página
 document.addEventListener('DOMContentLoaded', () => {
-    // Comprobar si ya hay credenciales guardadas
-    if (githubToken) {
-        loadAndRenderExams();
-    }
+    // Comprobar si ya hay credenciales guardadas
+    if (githubToken) {
+        loadAndRenderExams();
+    }
 });
+
 </script>
 </body>
 </html>
