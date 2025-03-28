@@ -207,6 +207,26 @@
               placeholder="Selecciona la fecha"
             />
           </div>
+          <div class="mb-6">
+            <label
+              for="reminderTimeSelect"
+              class="block text-gray-700 text-sm font-bold mb-2"
+              >Días de Recordatorio:</label
+            >
+            <select
+              id="reminderTimeSelect"
+              class="w-full border rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="0">Sin recordatorio</option>
+              <option value="1">1 día antes</option>
+              <option value="2">2 días antes</option>
+              <option value="3">3 días antes</option>
+              <option value="4">4 días antes</option>
+              <option value="5">5 días antes</option>
+              <option value="5">6 días antes</option>
+              <option value="7">Una semana antes</option>
+            </select>
+          </div>
           <div class="flex space-x-2">
             <button
               onclick="addExam()"
@@ -246,10 +266,42 @@
       X
     </button>
 
-    <div id="examListContainer" class="modal hidden">
+    <div id="examListContainer" class="modal hidden w-[1200px] max-w-2xl">
       <div class="p-6">
         <h2 class="text-xl font-bold mb-4">Lista de Exámenes</h2>
-        <ul id="examList" class="space-y-2"></ul>
+        <div class="container mx-auto p-4">
+          <!-- Tab Buttons -->
+          <div class="flex mb-4">
+            <button
+              id="currentExamsTab"
+              onclick="switchTab('current')"
+              class="px-4 py-2 bg-blue-500 text-white rounded-l"
+            >
+              Exámenes Actuales
+            </button>
+            <button
+              id="pastExamsTab"
+              onclick="switchTab('past')"
+              class="px-4 py-2 rounded-r"
+            >
+              Exámenes Pasados
+            </button>
+          </div>
+
+          <!-- Current Exams Tab Content -->
+          <div id="currentExamsTabContent" class="">
+            <ul id="currentExamList" class="space-y-2">
+              <!-- Current exams will be dynamically added here -->
+            </ul>
+          </div>
+
+          <!-- Past Exams Tab Content -->
+          <div id="pastExamsTabContent" class="hidden">
+            <ul id="pastExamList" class="space-y-2">
+              <!-- Past exams will be dynamically added here -->
+            </ul>
+          </div>
+        </div>
         <button
           onclick="closeExamList()"
           class="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-lg mt-4"
@@ -352,15 +404,17 @@
           );
           return;
         }
-
         const subject = document.getElementById("subjectSelect").value;
         const examName = document.getElementById("examInput").value.trim();
         const examDate = document.getElementById("datePicker").value;
 
+        // Get reminder time from the select element
+        const reminderTime = parseInt(
+          document.getElementById("reminderTimeSelect").value
+        );
+
         if (!subject || !examName || !examDate) {
-          alert(
-            "Por favor, selecciona una asignatura, ingresa el nombre del examen y la fecha."
-          );
+          alert("Por favor, complete todos los campos.");
           return;
         }
 
@@ -370,16 +424,18 @@
           examName: examName,
           examDate: examDate,
           created: new Date().toISOString(),
+          reminderTime: reminderTime,
         };
 
         exams.push(newExam);
         renderCalendar(exams);
         renderWeeklyCalendar(exams);
 
-        // Limpiar los campos
+        // Clear input fields
         document.getElementById("subjectSelect").value = "";
         document.getElementById("examInput").value = "";
         document.getElementById("datePicker").value = "";
+        document.getElementById("reminderTimeSelect").value = "0"; // Reset to default
       }
 
       // Función para guardar cambios en GitHub (requiere token)
@@ -650,9 +706,10 @@
         // Function to generate study reminder events
         function generateStudyReminders(exams) {
           return exams.flatMap((exam) => {
-            const reminderDays = studyReminderDays[exam.subject] || 0;
+            // Use reminderTime from the exam object instead of hardcoded values
+            const reminderDays = exam.reminderTime || 0;
 
-            // Skip if no study reminder days for the subject
+            // Skip if no study reminder days
             if (reminderDays === 0) return [];
 
             // Generate multiple study reminder events
@@ -753,7 +810,7 @@
           // Then add exam events
           exams.forEach((exam) => {
             calendar.addEvent({
-              title: `${exam.subject}: ${exam.examName}`,
+              title: `${exam.examName}`,
               start: exam.examDate,
               end: exam.examDate,
               allDay: true,
@@ -1050,9 +1107,32 @@
       }
 
       function renderExamList() {
-        const listContainer = document.getElementById("examList");
-        listContainer.innerHTML = "";
-        exams.forEach((exam, index) => {
+        // Get tab containers
+        const currentExamsContainer =
+          document.getElementById("currentExamList");
+        const pastExamsContainer = document.getElementById("pastExamList");
+        // Clear previous content
+        currentExamsContainer.innerHTML = "";
+        pastExamsContainer.innerHTML = "";
+        // Get current date
+        const currentDate = new Date();
+        // Sort exams by date (earliest to latest)
+        const sortedExams = exams.sort((a, b) => {
+          const dateA = new Date(a.examDate);
+          const dateB = new Date(b.examDate);
+          return dateA - dateB;
+        });
+        // Separate current and past exams
+        const currentExams = sortedExams.filter((exam) => {
+          const examDate = new Date(exam.examDate);
+          return examDate >= currentDate;
+        });
+        const pastExams = sortedExams.filter((exam) => {
+          const examDate = new Date(exam.examDate);
+          return examDate < currentDate;
+        });
+        // Render current exams
+        currentExams.forEach((exam, index) => {
           const listItem = document.createElement("li");
           listItem.classList.add(
             "flex",
@@ -1060,16 +1140,109 @@
             "items-center",
             "bg-gray-100",
             "p-2",
-            "rounded"
+            "rounded",
+            "mb-2"
+          );
+
+          // Calculate days until exam
+          const examDate = new Date(exam.examDate);
+          const timeDiff = examDate.getTime() - currentDate.getTime();
+          const daysUntilExam = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+          listItem.innerHTML = `
+            <span>${exam.subject} - ${exam.examName} (${exam.examDate})
+                - Quedan ${daysUntilExam} días
+            </span>
+            <div>
+                <button onclick="editReminderTime(${exams.indexOf(
+                  exam
+                )})" class="bg-blue-500 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs mr-2">
+                    Editar Recordatorio
+                </button>
+                <button onclick="deleteExam(${exams.indexOf(
+                  exam
+                )})" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">
+                    Eliminar
+                </button>
+            </div>
+        `;
+          currentExamsContainer.appendChild(listItem);
+        });
+        // Render past exams
+        pastExams.forEach((exam, index) => {
+          const listItem = document.createElement("li");
+          listItem.classList.add(
+            "flex",
+            "justify-between",
+            "items-center",
+            "bg-gray-200",
+            "p-2",
+            "rounded",
+            "mb-2",
+            "opacity-70"
           );
           listItem.innerHTML = `
-            <span>${exam.subject} - ${exam.examName} (${exam.examDate})</span>
-            <button onclick="deleteExam(${index})" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">
-                Eliminar
-            </button>
+            <span>${exam.subject} - ${exam.examName} (${exam.examDate})
+                - Completado
+            </span>
+            <div>
+                <button onclick="deleteExam(${exams.indexOf(
+                  exam
+                )})" class="bg-red-500 hover:bg-red-700 text-white px-2 py-1 rounded text-xs">
+                    Eliminar
+                </button>
+            </div>
         `;
-          listContainer.appendChild(listItem);
+          pastExamsContainer.appendChild(listItem);
         });
+        // Update tab labels with count
+        document.getElementById(
+          "currentExamsTab"
+        ).textContent = `Exámenes Actuales (${currentExams.length})`;
+        document.getElementById(
+          "pastExamsTab"
+        ).textContent = `Exámenes Pasados (${pastExams.length})`;
+      }
+      // Function to switch tabs
+      function switchTab(tabName) {
+        const currentExamsTab = document.getElementById(
+          "currentExamsTabContent"
+        );
+        const pastExamsTab = document.getElementById("pastExamsTabContent");
+        const currentExamsTabButton =
+          document.getElementById("currentExamsTab");
+        const pastExamsTabButton = document.getElementById("pastExamsTab");
+
+        if (tabName === "current") {
+          currentExamsTab.classList.remove("hidden");
+          pastExamsTab.classList.add("hidden");
+          currentExamsTabButton.classList.add("bg-blue-500", "text-white");
+          pastExamsTabButton.classList.remove("bg-blue-500", "text-white");
+        } else {
+          currentExamsTab.classList.add("hidden");
+          pastExamsTab.classList.remove("hidden");
+          currentExamsTabButton.classList.remove("bg-blue-500", "text-white");
+          pastExamsTabButton.classList.add("bg-blue-500", "text-white");
+        }
+      }
+
+      // New function to edit reminder time
+      function editReminderTime(index) {
+        const exam = exams[index];
+        const newReminderTime = parseInt(
+          prompt(
+            `Actualmente tienes ${
+              exam.reminderTime || 0
+            } días de recordatorio. ¿Cuántos días quieres ahora?`,
+            exam.reminderTime || "3"
+          )
+        );
+
+        if (!isNaN(newReminderTime)) {
+          exam.reminderTime = newReminderTime;
+          renderExamList();
+          renderCalendar(exams);
+        }
       }
 
       function deleteExam(index) {
@@ -1087,6 +1260,14 @@
         // Encontrar los detalles del examen
         const title = eventInfo.event.title;
         const subjectMatch = title.match(/^(.*): (.*)/);
+        const currentDate = new Date();
+
+        // Función para calcular días restantes
+        const calculateDaysRemaining = (examDate) => {
+          const examDateObj = new Date(examDate);
+          const timeDiff = examDateObj.getTime() - currentDate.getTime();
+          return Math.ceil(timeDiff / (1000 * 3600 * 24));
+        };
 
         let modalContent;
 
@@ -1101,27 +1282,34 @@
 
           // Contenido para un examen específico
           modalContent = `
-      <div class="bg-white rounded-lg p-8 max-w-md w-full relative text-center">
-        <button id="closeExamDetailsModal" class="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-3xl">
-          &times;
-        </button>
-        <div id="examDetailsContent" class="space-y-4">
-          <h2 class="text-4xl font-bold mb-4 text-blue-700">
-            ${title}
-          </h2>
-          ${
-            matchingExam
-              ? `
-            <div class="text-xl">
-              <p class="text-gray-700"><strong>Asignatura:</strong> ${matchingExam.subject}</p>
-              <p class="text-gray-700"><strong>Fecha:</strong> ${matchingExam.examDate}</p>
+          <div class="bg-white rounded-lg p-8 max-w-md w-full relative text-center">
+            <button id="closeExamDetailsModal" class="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-3xl">
+              &times;
+            </button>
+            <div id="examDetailsContent" class="space-y-4">
+              <h2 class="text-4xl font-bold mb-4 text-blue-700">
+                ${title}
+              </h2>
+              ${
+                matchingExam
+                  ? `
+                <div class="text-xl">
+                  <p class="text-gray-700"><strong>Asignatura:</strong> ${
+                    matchingExam.subject
+                  }</p>
+                  <p class="text-gray-700"><strong>Fecha:</strong> ${
+                    matchingExam.examDate
+                  }</p>
+                  <p class="text-gray-700"><strong>Quedan:</strong> ${calculateDaysRemaining(
+                    matchingExam.examDate
+                  )} días</p>
+                </div>
+              `
+                  : ""
+              }
             </div>
-          `
-              : ""
-          }
-        </div>
-      </div>
-    `;
+          </div>
+        `;
         } else {
           // Si es solo el nombre del examen (sin asignatura)
           const matchingExam = exams.find((exam) => exam.examName === title);
@@ -1129,62 +1317,91 @@
           if (matchingExam) {
             // Contenido para un examen específico sin asignatura
             modalContent = `
-        <div class="bg-white rounded-lg p-8 max-w-md w-full relative text-center">
-          <button id="closeExamDetailsModal" class="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-3xl">
-            &times;
-          </button>
-          <div id="examDetailsContent" class="space-y-4">
-            <h2 class="text-4xl font-bold mb-4 text-blue-700">
-              ${title}
-            </h2>
-            <div class="text-xl">
-              <p class="text-gray-700"><strong>Asignatura:</strong> ${matchingExam.subject}</p>
-              <p class="text-gray-700"><strong>Fecha:</strong> ${matchingExam.examDate}</p>
+            <div class="bg-white rounded-lg p-8 max-w-md w-full relative text-center">
+              <button id="closeExamDetailsModal" class="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-3xl">
+                &times;
+              </button>
+              <div id="examDetailsContent" class="space-y-4">
+                <h2 class="text-4xl font-bold mb-4 text-blue-700">
+                  ${title}
+                </h2>
+                <div class="text-xl">
+                  <p class="text-gray-700"><strong>Asignatura:</strong> ${
+                    matchingExam.subject
+                  }</p>
+                  <p class="text-gray-700"><strong>Fecha:</strong> ${
+                    matchingExam.examDate
+                  }</p>
+                  <p class="text-gray-700"><strong>Quedan:</strong> ${calculateDaysRemaining(
+                    matchingExam.examDate
+                  )} días</p>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      `;
+          `;
           } else {
             // Si no se encuentra el examen, mostrar asignaturas
             const subject = title;
-            const subjectExams = exams.filter(
-              (exam) => exam.subject === subject
-            );
+
+            // Sort exams by upcoming dates
+            const sortedSubjectExams = exams
+              .filter((exam) => exam.subject === subject)
+              .sort((a, b) => {
+                const dateA = new Date(a.examDate);
+                const dateB = new Date(b.examDate);
+
+                // First, prioritize future exams
+                const aIsFuture = dateA >= currentDate;
+                const bIsFuture = dateB >= currentDate;
+
+                if (aIsFuture && !bIsFuture) return -1;
+                if (!aIsFuture && bIsFuture) return 1;
+
+                // If both are future or both are past, sort by date
+                return dateA - dateB;
+              });
 
             // Contenido para una asignatura
             modalContent = `
-        <div class="bg-white rounded-lg p-8 max-w-md w-full relative text-center">
-          <button id="closeExamDetailsModal" class="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-3xl">
-            &times;
-          </button>
-          <div id="examDetailsContent" class="space-y-4">
-            <h2 class="text-4xl font-bold mb-4 text-blue-700">
-              ${subject}
-            </h2>
-            <div class="text-xl">
-              <h3 class="font-semibold mb-2">Próximos Exámenes:</h3>
-              ${
-                subjectExams.length > 0
-                  ? `
-                <ul class="space-y-2">
-                  ${subjectExams
-                    .map(
-                      (exam) => `
-                    <li class="bg-gray-100 p-2 rounded">
-                      <strong>${exam.examName}</strong>
-                      <p class="text-gray-600">Fecha: ${exam.examDate}</p>
-                    </li>
+            <div class="bg-white rounded-lg p-8 max-w-md w-full relative text-center">
+              <button id="closeExamDetailsModal" class="absolute top-4 right-4 text-gray-600 hover:text-gray-900 text-3xl">
+                &times;
+              </button>
+              <div id="examDetailsContent" class="space-y-4">
+                <h2 class="text-4xl font-bold mb-4 text-blue-700">
+                  ${subject}
+                </h2>
+                <div class="text-xl">
+                  <h3 class="font-semibold mb-2">Próximos Exámenes:</h3>
+                  ${
+                    sortedSubjectExams.length > 0
+                      ? `
+                    <ul class="space-y-2">
+                      ${sortedSubjectExams
+                        .map(
+                          (exam) => `
+                        <li class="bg-gray-100 p-2 rounded ${
+                          new Date(exam.examDate) < currentDate
+                            ? "opacity-50"
+                            : ""
+                        }">
+                          <strong>${exam.examName}</strong>
+                          <p class="text-gray-600">Fecha: ${exam.examDate}</p>
+                          <p class="text-gray-600">Quedan: ${calculateDaysRemaining(
+                            exam.examDate
+                          )} días</p>
+                        </li>
+                      `
+                        )
+                        .join("")}
+                    </ul>
                   `
-                    )
-                    .join("")}
-                </ul>
-              `
-                  : '<p class="text-gray-500">No hay exámenes programados para esta asignatura.</p>'
-              }
+                      : '<p class="text-gray-500">No hay exámenes programados para esta asignatura.</p>'
+                  }
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      `;
+          `;
           }
         }
 
@@ -1206,6 +1423,7 @@
           }
         });
       }
+
       // Cargar y renderizar exámenes al cargar la página
       document.addEventListener("DOMContentLoaded", () => {
         // Comprobar si ya hay credenciales guardadas
