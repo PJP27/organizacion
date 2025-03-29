@@ -89,7 +89,7 @@
       #calendar {
         min-width: 900px;
         max-width: 900px;
-        height: 600px !important;
+        height: 850px !important;
         margin: 40px auto;
         background-color: white;
         border-radius: 8px;
@@ -365,21 +365,47 @@
         document.getElementById("taskManager").classList.remove("hidden");
       }
 
+      async function requestTokenAndLoadExams() {
+        githubToken = prompt("Por favor, introduce tu token de GitHub:");
+        if (!githubToken) {
+          alert("Es necesario un token para acceder al repositorio.");
+          return;
+        }
+        try {
+          const loadedExams = await loadExams();
+          renderCalendar(loadedExams);
+          renderWeeklyCalendar(loadedExams);
+        } catch (error) {
+          console.error("Error al cargar los exámenes:", error);
+          alert(
+            "No se pudieron cargar los exámenes. Verifica tu token y vuelve a intentarlo."
+          );
+        }
+      }
+
       // Cargar exámenes desde GitHub sin necesidad de token
       async function loadExams() {
         try {
           const response = await fetch(
-            `https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}/main/${FILE_PATH}?t=${Date.now()}`
+            `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`,
+            {
+              headers: {
+                Authorization: `token ${githubToken}`, // Autenticación con el token
+              },
+            }
           );
 
           if (!response.ok) {
-            if (response.status === 404) return [];
             throw new Error(
               `Error al cargar los exámenes: ${response.status} - ${response.statusText}`
             );
           }
 
-          const loadedExams = await response.json();
+          const fileData = await response.json();
+          const fileContent = atob(fileData.content); // Decodificar contenido base64
+          const loadedExams = JSON.parse(fileContent);
+
+          // Procesar exámenes (agregar ID y timestamps si faltan)
           const processedExams = loadedExams.map((exam) => ({
             ...exam,
             id:
@@ -388,7 +414,7 @@
             created: exam.created || new Date().toISOString(),
           }));
 
-          exams = processedExams; // Update global exams
+          exams = processedExams; // Actualizar la lista global de exámenes
           return processedExams;
         } catch (error) {
           console.error("Error al cargar exámenes:", error);
@@ -643,6 +669,11 @@
       }
       // Renderizar exámenes en el calendario mensual
 
+      function isStudyEvent(examName) {
+        return /estudiar/i.test(examName); // Utilizamos regex con flag 'i' para que sea case-insensitive
+      }
+
+      // Modificar la función renderCalendar para aplicar el borde azul oscuro en lugar de rojo
       function renderCalendar(exams) {
         const subjectColors = {
           Religion: "#FF6B6B", // Rojo suave
@@ -662,6 +693,15 @@
       border-width: 2.5px !important;
       border-color: #FF0000 !important;
     }
+    .fc-event.study-event {
+      border-width: 2.5px !important;
+      border-color: #000080 !important; /* Azul oscuro */
+    }
+    .fc-event.study-reminder-for-study {
+      border-width: 2.5px !important;
+      border-color: #00BFFF !important; /* Celeste/Azul claro */
+    }
+    
     .fc-event.past-event {
       opacity: 0.5 !important;
       color: black !important;
@@ -712,6 +752,9 @@
             // Skip if no study reminder days
             if (reminderDays === 0) return [];
 
+            // Check if this is a study event (has "Estudiar" in the name)
+            const isStudy = isStudyEvent(exam.examName);
+
             // Generate multiple study reminder events
             const reminderEvents = [];
             const originalColor = subjectColors[exam.subject] || "#3788d8";
@@ -729,12 +772,17 @@
                 end: reminderDate.toISOString().split("T")[0],
                 allDay: true,
                 backgroundColor: reducedOpacityColor,
-                borderColor: reducedOpacityColor,
+                borderColor: isStudy ? "#00BFFF" : "#000080", // Celeste para eventos de estudio, azul oscuro para exámenes
                 textColor: isPastEvent(reminderDate.toISOString().split("T")[0])
                   ? "black"
                   : "black",
                 className: isPastEvent(reminderDate.toISOString().split("T")[0])
-                  ? ["study-reminder", "past-event"]
+                  ? [
+                      isStudy ? "study-reminder-for-study" : "study-reminder",
+                      "past-event",
+                    ]
+                  : isStudy
+                  ? "study-reminder-for-study"
                   : "study-reminder",
               });
             }
@@ -783,6 +831,7 @@
 
           // Then add exam events
           exams.forEach((exam) => {
+            const isStudy = isStudyEvent(exam.examName);
             calendar.addEvent({
               title: `${exam.examName}`,
               start: exam.examDate,
@@ -791,10 +840,12 @@
               backgroundColor: isPastEvent(exam.examDate)
                 ? hexToRgba(subjectColors[exam.subject] || "#3788d8", 0.1)
                 : subjectColors[exam.subject] || "#3788d8",
-              borderColor: "#FF0000",
+              borderColor: isStudy ? "#000080" : "#FF0000", // Azul oscuro para eventos de estudio, rojo para exámenes
               textColor: isPastEvent(exam.examDate) ? "black" : undefined,
               className: isPastEvent(exam.examDate)
-                ? ["exam-event", "past-event"]
+                ? [isStudy ? "study-event" : "exam-event", "past-event"]
+                : isStudy
+                ? "study-event"
                 : "exam-event",
             });
           });
@@ -809,6 +860,7 @@
 
           // Then add exam events
           exams.forEach((exam) => {
+            const isStudy = isStudyEvent(exam.examName);
             calendar.addEvent({
               title: `${exam.examName}`,
               start: exam.examDate,
@@ -817,10 +869,12 @@
               backgroundColor: isPastEvent(exam.examDate)
                 ? hexToRgba(subjectColors[exam.subject] || "#3788d8", 0.1)
                 : subjectColors[exam.subject] || "#3788d8",
-              borderColor: "#FF0000",
+              borderColor: isStudy ? "#000080" : "#FF0000", // Azul oscuro para eventos de estudio, rojo para exámenes
               textColor: isPastEvent(exam.examDate) ? "black" : undefined,
               className: isPastEvent(exam.examDate)
-                ? ["exam-event", "past-event"]
+                ? [isStudy ? "study-event" : "exam-event", "past-event"]
+                : isStudy
+                ? "study-event"
                 : "exam-event",
             });
           });
@@ -888,6 +942,11 @@
         );
 
         exams.forEach((exam) => {
+          // Comprobamos si es un evento de estudio, si lo es, lo saltamos
+          if (isStudyEvent(exam.examName)) {
+            return; // Salta a la siguiente iteración
+          }
+
           const examDate = new Date(exam.examDate);
           const dayOfWeek = examDate.getDay() === 0 ? 7 : examDate.getDay();
           const formattedDate = examDate.toISOString().split("T")[0];
@@ -941,6 +1000,7 @@
 
         return [...filteredScheduleEvents, ...examEvents];
       }
+
       function renderWeeklyCalendar(exams) {
         const weeklyCalendarEl = document.getElementById("weeklyCalendar");
         if (!weeklyCalendar) {
