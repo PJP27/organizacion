@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "id": "task-1744218062801-y5aqm52ix",
+    "name": "IlloJuan Prueba",
+    "subject": "Matematicas",
+    "startTime": "12:01",
+    "endTime": "04:02",
+    "date": "2025-04-09",
+    "status": "inprogress",
+    "highPriority": true,
+    "created": "2025-04-09T17:01:02.801Z"
+  }
+]
