@@ -1,0 +1,201 @@
+.fc-event-title-container {
+  font-size: 16px;
+}
+#deleteButton {
+  display: fixed;
+  right: 20px;
+  z-index: 100;
+}
+
+.floating-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+.floating-button2 {
+  position: fixed;
+  bottom: 70px;
+  right: 20px;
+  z-index: 100;
+}
+
+.fc-event-time {
+  display: none;
+}
+
+.fc-event-title-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top-floating-button {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 100;
+}
+.hidden {
+  display: none !important;
+}
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background-color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 0.75rem;
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+#calendar {
+  min-width: 1200px;
+  max-width: 1200px;
+  height: 1050px !important;
+  margin: 40px auto;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+#weeklyCalendar {
+  min-width: 1200px;
+  max-width: 1200px;
+  overflow: scroll !important;
+  margin: 40px auto;
+  background-color: white;
+  border-radius: 8px;
+  height: 420px !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.fc-header-toolbar {
+  margin-bottom: 4px !important;
+}
+
+.fc-daygrid-day-events,
+.fc-daygrid-day-events {
+  min-height: fit-content !important;
+}
+
+#calendar,
+#weeklyCalendar,
+#kanbanContainer {
+  display: none;
+}
+
+/* Mostrar contenedor específico según la opción seleccionada */
+#view-monthly:checked ~ main #calendar {
+  display: block !important;
+}
+
+#view-weekly:checked ~ main #weeklyCalendar {
+  display: block !important;
+}
+
+#view-kanban:checked ~ main #kanbanContainer {
+  display: block !important;
+}
+
+/* Preservar los estilos originales del calendario semanal */
+#weeklyCalendar {
+  /* Conservar los estilos originales cuando se muestra */
+  display: none; /* Inicialmente oculto */
+  /* Asegúrate de que no tenga ningún estilo que lo rompa */
+  width: auto;
+  max-width: none;
+  overflow: visible;
+}
+
+/* Estilos para los labels que funcionan como botones */
+.view-selector {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1rem;
+  margin-top: 1.5rem;
+}
+
+.view-selector input[type="radio"] {
+  display: none;
+}
+
+.view-selector label {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-selector label:hover {
+  background-color: #f3f4f6;
+  color: #1d4ed8;
+}
+
+/* Estilo para el primer botón */
+.view-selector label:first-of-type {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+/* Estilo para el último botón */
+.view-selector label:last-of-type {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+/* Estilo para el botón seleccionado */
+#view-monthly:checked ~ .view-selector label[for="view-monthly"],
+#view-weekly:checked ~ .view-selector label[for="view-weekly"],
+#view-kanban:checked ~ .view-selector label[for="view-kanban"] {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border-color: #93c5fd;
+  z-index: 1;
+}
+
+/* Enfoque alternativo: usar la propiedad visibility en lugar de display */
+/* Este enfoque puede preservar mejor los estilos */
+#calendar,
+#weeklyCalendar,
+#kanbanContainer {
+  visibility: hidden;
+  position: absolute;
+  width: 100%;
+  left: 0;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+#view-monthly:checked ~ main #calendar {
+  visibility: visible !important;
+  position: relative !important;
+  opacity: 1 !important;
+}
+
+#view-weekly:checked ~ main #weeklyCalendar {
+  visibility: visible !important;
+  position: relative !important;
+  opacity: 1 !important;
+}
+
+#view-kanban:checked ~ main #kanbanContainer {
+  visibility: visible !important;
+  position: relative !important;
+  opacity: 1 !important;
+}
