@@ -1,1 +1,24 @@
-[]
+[
+  {
+    "id": "task-1745342332408-xb1emeu96",
+    "name": "Estudiar Ortega",
+    "subject": "Filosofia",
+    "startTime": "",
+    "endTime": "",
+    "date": "2025-04-23",
+    "status": "todo",
+    "highPriority": true,
+    "created": "2025-04-22T17:18:52.408Z"
+  },
+  {
+    "id": "task-1745342360111-mk9tdnp51",
+    "name": "Practcar comentarios de texto  varios",
+    "subject": "Lengua",
+    "startTime": "",
+    "endTime": "",
+    "date": "2025-04-23",
+    "status": "todo",
+    "highPriority": false,
+    "created": "2025-04-22T17:19:20.111Z"
+  }
+]
